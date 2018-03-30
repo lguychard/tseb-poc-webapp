@@ -13,13 +13,12 @@ export interface EditPostOptions {
 
 export const PostEdition = ({ post, savePost, deletePost, back }: EditPostOptions) =>  (
     <div>
-        <h1>Create New Post</h1>
+        <h1>{ post.id ? 'Edit Post' : 'New Post' }</h1>
         <Form
-            onSubmit={savePost}
+            onSubmit={(values: {}) => savePost({...post, ...values})}
             defaultValues={post}
-            preSubmit={values => ({...values, keywords: (values.keywords || '').split(',')})}
             render={({submitForm, values, addValue, removeValue}) => (
-                <form onSubmit={submitForm}>
+                <form>
                     <fieldset>
                         <Text field="title" placeholder="Title"/>
                     </fieldset>
@@ -27,13 +26,10 @@ export const PostEdition = ({ post, savePost, deletePost, back }: EditPostOption
                         <Text field="author" placeholder="Author" />
                     </fieldset>
                     <fieldset>
-                        <Text field="keywords" placeholder="Keywords" />
+                        <TextArea field="content" placeholder="Content" cols={60} rows={20}/>
                     </fieldset>
                     <fieldset>
-                        <TextArea field="content" placeholder="Content" />
-                    </fieldset>
-                    <fieldset>
-                        <button type="submit">save</button>
+                        <button onClick={submitForm}>save</button>
                         <button onClick={deletePost}>delete</button>
                         <button onClick={back}>back</button>
                     </fieldset>

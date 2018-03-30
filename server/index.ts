@@ -6,50 +6,71 @@ import * as Nedb from 'nedb'
 
 const uuidv4: Function = require('uuid/v4')
 
-// Both API and database are injected, allowing to unit-test the server code
-// in-process, with a local event bus and a mock or in-memory database
-function main(app: typeof Api, database: { posts: Nedb }): void {
+/**
+ * Entry point of the server code.
+ * 
+ * the API and the databse are injected, allowing to unit test the server code
+ * in-process, without having to fire up an HTTP server or a database instance
+ */
+export function main(app: typeof Api, database: { posts: Nedb }): void {
 
     app.getPost.on(({ id }) => new Promise((resolve, reject) =>
-        database.posts
-            .findOne({ id }, (err, document) => err ? reject(err) : resolve(document as Post)
+        database.posts.findOne({ id }, (err, document) =>
+            err ? reject(err) : resolve(document as Post)
         )
     ))
 
     app.getPosts.on(() => database.posts.getAllData())
 
-    app.createPost.on(post => new Promise((resolve, reject) => {
-        post.id = uuidv4()
-        return database.posts
-            .insert(post, err => err ? reject(err) : resolve(post))
+    app.savePost.on(({type, post}) => new Promise((resolve, reject) => {
+        if (type === 'create') {
+            post.id = uuidv4()
+            return database.posts
+                .insert(post, err => err ? reject(err) : resolve())
+        } else {
+            return database.posts.update(
+                { id: post.id },
+                post,
+                { upsert: true },
+                err => err ? reject(err) : resolve()
+            )
+        }
     }))
-
+    
     app.deletePost.on(({ id }) => new Promise((resolve, reject) =>
-        database.posts
-            .remove({ id }, err => err ? reject(err) : resolve())
-    ))
+    database.posts
+    .remove({ id }, err => err ? reject(err) : resolve())
+))
 
 }
 
-if (module === require.main) {
+// When launching directly server/index.js, `main` is called with real API and datbase
+// instances, created with `makeApi` and `makeDatabase`
 
-    const api = createEventBus({
-        events: Api,
-        channels: [ new HTTPServerChannel({
-            port: 4000,
-            static: {
-                folder: 'public'
-            }
-        }) ]
+const makeApi = () => {
+    const channel = new HTTPServerChannel({
+        port: 4000,
+        static: {
+            folder: 'public'
+        }
     })
+    return createEventBus({
+        events: Api,
+        channels: [ channel ]
+    })
+}
+
+
+const makeDatabase = () => new Promise<Nedb>((resolve, reject) => {
     const posts = new Nedb({
         filename: 'database.json'
     })
-    posts.loadDatabase(err => {
-        if (err) {
-            console.error(err)
-            process.exit(1)
-        }
-        main(api, { posts })
+    posts.loadDatabase(err => err ? reject(err) : resolve(posts))
+})
+
+if (module === require.main) {
+    makeDatabase().then(posts => {
+        const app = makeApi()
+        main(app, { posts })
     })
 }

@@ -12,7 +12,6 @@
     "@types/react-dom": "^16.0.4",
     "@types/react-form": "^2.16.0",
     "nedb": "^1.8.0",
-    "ramda": "^0.25.0",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "react-form": "^3.4.4",

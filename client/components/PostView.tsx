@@ -12,12 +12,9 @@ export interface ViewPostOptions {
 export const PostView = ({ post, back, editPost }: ViewPostOptions) => (
     <article className="post">
         <header>
-            <h2>{post.title}</h2>
+            <h1>{post.title}</h1>
             <p>
-                <strong>{post.author}</strong>, {new Date(post.createdAt).toDateString}
-            </p>
-            <p className="keywords">
-                <strong>Keywords:</strong> {post.keywords.join(', ')}
+                <strong>{post.author}</strong>, {new Date(post.createdAt).toDateString()}
             </p>
         </header>
         <p>{post.content}</p>

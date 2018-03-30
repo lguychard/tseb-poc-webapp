@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom'
 
 import {createEventBus} from 'ts-event-bus'
 import HTTPClientChannel from 'ts-event-bus-http-client-channel'
-import { Post } from './../api'
+import {Post} from './../api'
 import Api from './../api'
 
 import {PostList} from './components/PostList'
@@ -17,7 +17,6 @@ const getDefautPost = (): Post => ({
     updatedAt: Date.now(),
     content: '',
     id: '',
-    keywords: []
 })
 
 type AppState = {
@@ -42,7 +41,7 @@ class App extends React.Component<AppState> {
     componentDidMount() {
         this.api.getPosts(null).then(posts => {
             this.setState({
-                ...this.state,
+                view: 'list',
                 posts
             })
         })
@@ -54,6 +53,7 @@ class App extends React.Component<AppState> {
                     posts={this.state.posts}
                     viewPost={(p: Post) => this.setState({ posts: this.state.posts, view: 'read', current: p })}
                     createNew={() => this.setState({
+                        ...this.state,
                         view: 'edit',
                         current: getDefautPost(),
                         newPost: true
@@ -62,7 +62,7 @@ class App extends React.Component<AppState> {
             case 'read':
                 return <PostView
                     post={this.state.current}
-                    back={() => this.setState({ posts: this.state.posts, view: 'list'})}
+                    back={() => this.setState({ ...this.state, view: 'list'})}
                     editPost={() => this.setState({ ...this.state, view: 'edit'})}
                 />
             case 'edit':
@@ -70,37 +70,34 @@ class App extends React.Component<AppState> {
                     post={this.state.current}
                     savePost={(p: Post) => this._savePost(p)}
                     deletePost={() => this._deletePost()}
-                    back={() => this.setState({ posts: this.state.posts, view: 'list'})}
+                    back={() => this.setState({ ...this.state, view: 'list'})}
                 />
         }
     }
 
-    private _savePost(p: Post) {
-        if (this.state.newPost) {
-            this.api
-                .createPost(p)
-                .then(p => this.setState({ view: 'list', posts: this.state.posts.concat(p)}))
-                .catch(console.error)
-        } else {
-            this.api
-                .updatePost(p)
-                .then(() => {
-                    const idx = this.state.posts.findIndex(p2 => p.id === p2.id)
-                    this.state.posts[idx] = p
-                    this.setState({ view: 'list', posts: this.state.posts })
-                })
-                .catch(console.error)
-        }
+    private _getAllPosts() {
+        return this.api.getPosts(null).then(posts => {
+            this.setState({
+                view: 'list',
+                posts
+            })
+        })
+    }
+
+    private _savePost(post: Post) {
+        return this.api.savePost({
+                type: this.state.newPost ? 'create' : 'update',
+                post
+            })
+            .then(() => this._getAllPosts())
+            .catch(console.error)
     }
 
     private _deletePost() {
-        this.api
+        return this.api
             .deletePost({ id: this.state.current.id })
-            .then(() => {
-                const idx = this.state.posts.findIndex(p => p.id === this.state.current.id)
-                this.state.posts.splice(idx, 1)
-                this.setState({ view: 'list', posts: this.state.posts })
-            })
+            .then(() => this._getAllPosts())
+            .catch(console.error)
     }
 
 }
